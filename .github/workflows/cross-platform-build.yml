@@ -1,0 +1,92 @@
+name: Buffer Overflow Test
+
+on: [push, pull_request]
+
+jobs:
+  ubuntu-gcc:
+    name: Ubuntu (GCC)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++
+
+      - name: Compile without protection
+        run: |
+          g++ -o overflow main.cpp
+          echo "=== Running without protection ==="
+          ./overflow || true
+
+      - name: Compile with stack protector
+        run: |
+          g++ -fstack-protector-all -o overflow_protected main.cpp
+          echo "=== Running with stack protector ==="
+          ./overflow_protected || true
+
+      - name: Compile with AddressSanitizer
+        run: |
+          g++ -fsanitize=address -g -O1 -o overflow_asan main.cpp
+          echo "=== Running with AddressSanitizer (GCC) ==="
+          ASAN_OPTIONS=detect_stack_use_after_return=1 ./overflow_asan || true
+
+  ubuntu-clang:
+    name: Ubuntu (Clang)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Clang
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+
+      - name: Compile without protection
+        run: |
+          clang++ -o overflow main.cpp
+          echo "=== Running without protection ==="
+          ./overflow || true
+
+      - name: Compile with stack protector
+        run: |
+          clang++ -fstack-protector-all -o overflow_protected main.cpp
+          echo "=== Running with stack protector ==="
+          ./overflow_protected || true
+
+      - name: Compile with AddressSanitizer
+        run: |
+          clang++ -fsanitize=address -g -O1 -o overflow_asan main.cpp
+          echo "=== Running with AddressSanitizer (Clang) ==="
+          ASAN_OPTIONS=detect_stack_use_after_return=1 ./overflow_asan || true
+
+  macos-clang:
+    name: macOS (Clang)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Compile without protection
+        run: |
+          clang++ -o overflow main.cpp
+          echo "=== Running without protection ==="
+          ./overflow || true
+
+      - name: Compile with stack protector
+        run: |
+          clang++ -fstack-protector-all -o overflow_protected main.cpp
+          echo "=== Running with stack protector ==="
+          ./overflow_protected || true
+
+      - name: Compile with AddressSanitizer
+        run: |
+          clang++ -fsanitize=address -g -O1 -o overflow_asan main.cpp
+          echo "=== Running with AddressSanitizer (macOS Clang) ==="
+          ASAN_OPTIONS=detect_stack_use_after_return=1 ./overflow_asan || true

@@ -56,6 +56,75 @@ To prevent such vulnerabilities:
 
 ---
 
+## Why Use `execve()`, `write()`, and `_exit()` Instead of Higher-Level Functions?
+
+In this project, several **low-level system calls** from the `unistd.h` header are used — specifically:
+
+* `execve()`
+* `write()`
+* `_exit()`
+
+These are deliberately chosen over higher-level counterparts like `system()`, `printf()`, and `exit()`.
+
+### Reasons for Using Low-Level System Calls
+
+#### 1. `execve()` vs. `system()`
+
+```cpp
+execve("/usr/bin/id", args, environ);
+```
+
+* `execve()` is a **direct system call** that replaces the current process image with a new program (here: `/usr/bin/id`).
+* It **does not return** if successful — it avoids further use of the current stack, which may be **corrupted** due to the buffer overflow.
+* In contrast, `system()` is a high-level libc wrapper that:
+
+  * Internally uses the stack
+  * Relies on correct frame pointers and function call structure
+  * Can **segfault** if the return address or `RBP` was overwritten (as in our exploit)
+
+#### 2. `write()` vs. `printf()`
+
+```cpp
+write(STDOUT_FILENO, msg, sizeof(msg)-1);
+```
+
+* `write()` is a **direct syscall** that does not depend on buffered I/O or `FILE*` structures (`stdout`, etc.).
+* It works even when the program’s memory or stack is corrupted.
+* `printf()` is part of the standard I/O library and:
+
+  * Uses variadic arguments and internal buffers
+  * Can **segfault** or invoke undefined behavior in corrupted environments
+
+#### 3. `_exit()` vs. `exit()`
+
+```cpp
+_exit(1);
+```
+
+* `_exit()` terminates the process **immediately**, without calling any cleanup handlers or flushing I/O buffers.
+* It avoids invoking destructors or global/static object finalizers, which again may rely on valid stack state.
+* `exit()` is a higher-level function that:
+
+  * Calls all `atexit()` handlers
+  * Flushes standard I/O buffers
+  * May access stack- or heap-allocated structures — unsafe in post-exploit scenarios
+
+---
+
+### Summary Table
+
+| System Call | Replaces   | Reason for Use                                            |
+| ----------- | ---------- | --------------------------------------------------------- |
+| `execve()`  | `system()` | Does not rely on stack; safe after control flow hijack    |
+| `write()`   | `printf()` | No buffering or stack usage; raw file descriptor write    |
+| `_exit()`   | `exit()`   | Exits cleanly without triggering stack-dependent behavior |
+
+---
+
+By using only low-level system calls in `secret()`, the project ensures that **even after buffer overflow and return address corruption**, the injected code path is **robust, minimal, and reliable**, avoiding segmentation faults or undefined behavior caused by corrupted stack frames.
+
+---
+
 ## Example Output
 
 ```
@@ -76,6 +145,7 @@ Select mode: 3
 Using crafted payload (80 bytes)...
 Copying input (80 bytes) into buffer[64]...
 Done copying. Buffer content: AAAAAAAAAAAA...
+
 uid=1000(user) gid=1000(user) groups=1000(user)
 ```
 

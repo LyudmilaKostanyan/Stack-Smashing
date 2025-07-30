@@ -18,24 +18,21 @@ jobs:
 
       - name: Compile without protection
         run: |
-          g++ -std=c++17 -fno-stack-protector -no-pie -O0 -o overflow main.cpp
+          g++ -g -fno-stack-protector -z execstack -no-pie -O0 -o overflow main.cpp
           echo "=== Running without protection (mode 3) ==="
           echo "3" | ./overflow || true
-          ls -a
 
       - name: Compile with stack protector
         run: |
-          g++ -std=c++17 -fstack-protector-all -O1 -o overflow_protected main.cpp
+          g++ -fstack-protector-all -O0 -o overflow_protected main.cpp
           echo "=== Running with stack protector (mode 3) ==="
           echo "3" | ./overflow_protected || true
-          ls -a
 
       - name: Compile with AddressSanitizer
         run: |
-          g++ -std=c++17 -fsanitize=address -g -O1 -o overflow_asan main.cpp
+          g++ -fsanitize=address -g -O0 -o overflow_asan main.cpp
           echo "=== Running with AddressSanitizer (mode 3) ==="
           echo "3" | ./overflow_asan || true
-          ls -a
 
   ubuntu-clang:
     name: Ubuntu (Clang)
@@ -52,21 +49,49 @@ jobs:
 
       - name: Compile without protection
         run: |
-          clang++ -std=c++17 -fno-stack-protector -no-pie -O0 -o overflow main.cpp
+          clang++ -g -fno-stack-protector -z execstack -no-pie -O0 -o overflow main.cpp
           echo "=== Running without protection (mode 3) ==="
           echo "3" | ./overflow || true
-          ls -a
 
       - name: Compile with stack protector
         run: |
-          clang++ -std=c++17 -fstack-protector-all -O1 -o overflow_protected main.cpp
+          clang++ -fstack-protector-all -O0 -o overflow_protected main.cpp
           echo "=== Running with stack protector (mode 3) ==="
           echo "3" | ./overflow_protected || true
-          ls -a
 
       - name: Compile with AddressSanitizer
         run: |
-          clang++ -std=c++17 -fsanitize=address -g -O1 -o overflow_asan main.cpp
+          clang++ -fsanitize=address -g -O0 -o overflow_asan main.cpp
           echo "=== Running with AddressSanitizer (mode 3) ==="
           echo "3" | ./overflow_asan || true
-          ls -a
+
+  mac-gcc:
+    name: macOS (GCC)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install GCC
+        run: |
+          brew install gcc
+
+      - name: Compile without protection
+        run: |
+          g++-13 -g -fno-stack-protector -Wl,-no_pie -O0 -o overflow main.cpp
+          echo "=== Running without protection (mode 3) ==="
+          echo "3" | ./overflow || true
+
+      - name: Compile with stack protector
+        run: |
+          g++-13 -fstack-protector-all -O0 -o overflow_protected main.cpp
+          echo "=== Running with stack protector (mode 3) ==="
+          echo "3" | ./overflow_protected || true
+
+      - name: Compile with AddressSanitizer
+        run: |
+          g++ -fsanitize=address -g -O0 -o overflow_asan main.cpp
+          echo "=== Running with AddressSanitizer (mode 3) ==="
+          echo "3" | ./overflow_asan || true
+

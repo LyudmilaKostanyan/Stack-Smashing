@@ -4,38 +4,20 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
-#ifdef _WIN32
-    #include <io.h>
-    #include <process.h>  // for _exit()
-    #define STDOUT_FILENO 1
-#else
-    #include <unistd.h>
-#endif
+#include <unistd.h>
 
 int main(int argc, char** argv);
 
-[[noreturn]] void secret() {
-    // Use direct file operations instead of system() calls
-    FILE* file1 = fopen("./exploit_success.txt", "w");
-    if (file1) {
-        fprintf(file1, "Exploit executed successfully!\n");
-        fclose(file1);
-    }
-    
-    FILE* file2 = fopen("./exploit_proof.txt", "w");
-    if (file2) {
-        fprintf(file2, "Buffer overflow exploit executed at %p\n", (void*)&secret);
-        fprintf(file2, "This proves the return address was successfully overwritten!\n");
-        fclose(file2);
-    }
-    
-    // Use write() for output to avoid potential stack issues with printf
-    const char msg1[] = "*** Files created: exploit_success.txt and exploit_proof.txt ***\n";
-    const char msg2[] = "*** Exploit successful! ***\n";
-    write(STDOUT_FILENO, msg1, sizeof(msg1)-1);
-    write(STDOUT_FILENO, msg2, sizeof(msg2)-1);
-    
-    _exit(42);  // Exit immediately
+__attribute__((noreturn)) void secret() {
+    char* const args[] = { (char*)"/usr/bin/id", nullptr };
+
+    extern char** environ;
+
+    execve("/usr/bin/id", args, environ);
+
+    const char msg[] = "execve failed\n";
+    write(STDOUT_FILENO, msg, sizeof(msg)-1);
+    _exit(1);
 }
 
 void safe_function() {
